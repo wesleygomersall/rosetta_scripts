@@ -2,9 +2,14 @@
 
 import argparse
 # import numpy as np
-from pyrosetta import init
-from pyrosetta import create_score_function
-from pyrosetta import pose_from_pdb, Pose
+from pyrosetta import *
+
+from pyrosetta.rosetta.core.scoring import *
+# from pyrosetta.rosetta.core.pack.task import *
+# from pyrosetta.rosetta.protocols import *
+# from pyrosetta.rosetta.protocols.geometry import *
+
+# from pyrosetta.rosetta.protocols.relax import FastRelax
 from pyrosetta.rosetta.protocols.relax import ClassicRelax
 
 def main(): 
@@ -12,7 +17,7 @@ def main():
     parser.add_argument("--input", "-i", type=str, help="Path to input pdb file.")
     args = parser.parse_args()
 
-    scorefxn = create_score_function('ref2015')
+    scorefxn = create_score_function("ref2015")
     print(scorefxn) 
     relaxed_out_path = "relaxed.pdb"
     translated_out_path = "translated.pdb" 
