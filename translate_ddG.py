@@ -10,7 +10,7 @@ from pyrosetta.rosetta.protocols.rigid import RigidBodyTransMover # if not just 
 from pyrosetta.rosetta.protocols.docking import setup_foldtree
 
 def main(): 
-    parser = argparse.ArgumentParser(description="")
+    parser = argparse.ArgumentParser(description="Calculate scores for relaxed protein-peptide complex and for translated peptide")
     parser.add_argument("--input", "-i", type=str, 
                         help="Path to input pdb file.")
     parser.add_argument("--relax", action="store_true", default=False, 
@@ -24,13 +24,13 @@ def main():
     relax = ClassicRelax() 
     relax.set_scorefxn(scorefxn) 
 
-    output_directory = "dgoutputs"
+    output_directory = os.path.basename(args.input).split(".")[0] + "_dgoutput"
     if not os.path.exists(output_directory):
         os.makedirs(output_directory)
     pre_translated_out_path = output_directory + "/structure_relaxed.pdb"
     translated_out_path = output_directory + "/structure_translated.pdb" 
 
-    # Read pose get initial score
+    print(f"Input pose {args.input}")
     input_pose = pose_from_pdb(args.input)
     input_score = scorefxn(input_pose)
     print(f"input structure score: {input_score}")
@@ -68,10 +68,10 @@ def main():
 
     with open(output_directory + '/out_energies.csv', 'w') as fout: 
         fout.write("struct,energy\n")
-        fout.write(f"input,{input_score}\n")
-        fout.write(f"relaxed,{relaxed_score}\n")
-        fout.write(f"translated,{translated_score}\n")
-        fout.write(f"diff,{delta_g}\n")
+        fout.write(f"{args.input}_RAW,{input_score}\n")
+        fout.write(f"{args.input}_relaxed,{relaxed_score}\n")
+        fout.write(f"{args.input}_translated,{translated_score}\n")
+        fout.write(f"{args.input}_diff,{delta_g}\n")
 
 if __name__ == "__main__": 
     main()
