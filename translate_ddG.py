@@ -2,19 +2,16 @@
 
 import argparse
 import os
-# import numpy as np
 from pyrosetta import *
 from pyrosetta.rosetta.core.scoring import *
 from pyrosetta.rosetta.protocols.relax import ClassicRelax
-from pyrosetta.rosetta.protocols.rigid import RigidBodyTransMover # if not just try removing '.geometry'
+from pyrosetta.rosetta.protocols.rigid import RigidBodyTransMover
 from pyrosetta.rosetta.protocols.docking import setup_foldtree
 
 def main(): 
     parser = argparse.ArgumentParser(description="Calculate scores for relaxed protein-peptide complex and for translated peptide")
-    parser.add_argument("--input", "-i", type=str, 
-                        help="Path to input pdb file.")
-    parser.add_argument("--relax", action="store_true", default=False, 
-                        help="Relax structure, default will not.") 
+    parser.add_argument("--input", "-i", type=str, help="Path to input pdb file.")
+    parser.add_argument("--refine", action="store_true", default=False, help="Relax structure, default will not.") 
     args = parser.parse_args()
 
     init("-mute all")
@@ -37,7 +34,7 @@ def main():
     relaxed_pose = Pose()
     relaxed_pose.assign(input_pose)
 
-    if args.relax: # relax and re score
+    if args.refine: # relax and re score
         relax.apply(relaxed_pose) 
         relaxed_score = scorefxn(relaxed_pose)
         print(f"relaxed score: {relaxed_score}")
@@ -55,7 +52,7 @@ def main():
     trans_mover.step_size(50)
     trans_mover.apply(translated_pose)
 
-    if args.relax: 
+    if args.refine: 
         print("relax transformed pose")
         relax.apply(translated_pose) 
 
