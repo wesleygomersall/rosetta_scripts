@@ -8,7 +8,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --time=12:00:00           
-#SBATCH --mem=64G
+#SBATCH --mem=16G
 #SBATCH --mail-type=END
 #SBATCH --mail-user=wesg@uoregon.edu
 
@@ -22,6 +22,6 @@ INPUT_PDB=$1
 source ~/miniforge3/etc/profile.d/conda.sh # for conda to work
 conda activate pyrosetta
 
-python3 $HOME/rosetta_scripts/translate_ddG.py
+python3 $HOME/rosetta_scripts/translate_ddG.py \
     --input $INPUT_PDB \
     --refine
