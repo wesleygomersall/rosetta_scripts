@@ -60,6 +60,7 @@ def main():
     print(f"post-translation score: {translated_score}")
     translated_pose.dump_pdb(translated_out_path)
 
+    # dG_binding = dG_bound - (dG_unboundpeptide + dG_unboundprotein)
     delta_g = relaxed_score - translated_score
     print(delta_g)
 
