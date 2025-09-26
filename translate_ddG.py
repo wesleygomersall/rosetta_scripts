@@ -93,9 +93,9 @@ def main():
             tf = TaskFactory()
             tf.push_back(operation.InitializeFromCommandline())
             tf.push_back(operation.IncludeCurrent())
-            # Disable design of chain A
+            # Disable packing and design of chain A
             tf.push_back(operation.OperateOnResidueSubset( 
-                operation.RestrictToRepackingRLT(), chain_A)) 
+                operation.PreventRepackingRLT(), chain_A)) 
 
             # Convert to PackerTask to view
             # packer_task = tf.create_task_and_apply_taskoperations(test_pose)
