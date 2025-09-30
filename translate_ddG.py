@@ -3,6 +3,7 @@
 import argparse
 import os
 import datetime 
+import pandas as pd
 from pyrosetta import *
 from pyrosetta.rosetta.core.scoring import *
 from pyrosetta.rosetta.core.select import residue_selector
@@ -59,9 +60,6 @@ def main():
     output_directory = date_time_string + "_ddGout_" + os.path.basename(args.input).split(".")[0] 
     if not os.path.exists(output_directory):
         os.makedirs(output_directory)
-
-    csv_out = open(output_directory + '/out_energies.csv', 'w')
-    csv_out.write(f"DesignNum,PeptideSequence,bound_dG,unbound_dG,ddG\n")
     
     scorefxn = create_score_function("ref2015_cart")
     relax = ClassicRelax() 
@@ -81,8 +79,15 @@ def main():
         print("Relax=False")
         relaxed_score = input_score
 
+    all_structnum = []
+    all_peptide_sequence = []
+    all_bound_dG = []
+    all_unbound_dG = []
+    all_ddG = []
+
     for structnum in range(0, args.ndesigns + 1):
-        print(f"Structure: {structnum}")
+        print(f"\nStructure: {structnum}")
+        all_structnum.append(structnum)
         
         test_pose = relaxed_input.clone()
 
@@ -114,12 +119,12 @@ def main():
             rel_design.minimize_bond_lengths(True)
             rel_design.apply(test_pose) 
         
-        peptide_sequence = test_pose.chain_sequence(2)
-        print(f"Peptide: {peptide_sequence}") 
+        all_peptide_sequence.append(test_pose.chain_sequence(2))
+        print(f"Peptide: {all_peptide_sequence[-1]}") 
         # print(test_pose.pdb_info()) 
 
-        bound_dG = scorefxn(test_pose)
-        print(f"Bound score: {bound_dG}")
+        all_bound_dG.append(scorefxn(test_pose))
+        print(f"Bound score: {all_bound_dG[-1]}")
 
         if args.dump:
             pre_translated_out_path = f"{output_directory}/structure{structnum}_relaxed.pdb"
@@ -128,22 +133,25 @@ def main():
         unbind(test_pose, "A_B")
 
         if args.refine: 
-            print("Relax transformed pose")
             relax.apply(test_pose) 
 
-        unbound_dG = scorefxn(test_pose)
-        print(f"Unbound score: {unbound_dG}")
+        all_unbound_dG.append(scorefxn(test_pose))
+        print(f"Unbound score: {all_unbound_dG[-1]}")
 
         if args.dump: 
             translated_out_path = f"{output_directory}/structure{structnum}_translated.pdb"
             test_pose.dump_pdb(translated_out_path)
 
-        ddG = bound_dG - unbound_dG
-        print(f"ddG: {ddG}")
+        all_ddG.append(all_bound_dG[-1] - all_unbound_dG[-1])
+        print(f"ddG: {all_ddG[-1]}")
 
-        csv_out.write(f"{structnum},{peptide_sequence},{bound_dG},{unbound_dG},{ddG}\n")
-
-    csv_out.close()
+    allstructs_ddG_df = pd.DataFrame({
+        "DesignNum": all_structnum,
+        "PeptideSequence": all_peptide_sequence,
+        "bound_dG": all_bound_dG,
+        "unbound_dG": all_unbound_dG,
+        "ddG": all_ddG})
+    allstructs_ddG_df.to_csv(f"{output_directory}/out_energies.csv", index=False)
 
 if __name__ == "__main__": 
     main()
