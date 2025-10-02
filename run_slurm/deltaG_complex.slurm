@@ -24,4 +24,5 @@ conda activate pyrosetta
 
 python3 $HOME/rosetta_scripts/translate_ddG.py \
     --input $INPUT_PDB \
-    --refine
+    --refine \
+    --dump
