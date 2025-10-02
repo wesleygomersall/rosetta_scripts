@@ -10,8 +10,8 @@
 #SBATCH --time=12:00:00           
 #SBATCH --mem=4G
 
-# Create list of files for .cif -> .pdf conversion: `cif2pdb.txt`
-FILE_LIST="cif2pdb.txt"
+# Create list of files for .cif -> .pdf conversion: `inputs_cif2pdb.txt`
+FILE_LIST="inputs_cif2pdb.txt"
 
 if ! [ -s "$FILE_LIST" ]; then
     echo "$FILE_LIST is empty. Exiting."

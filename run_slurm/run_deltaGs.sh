@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # This script initiates jobs with `deltaG_complex.slurm` for each input pdb file
-# in `dGcomplex_inputs.txt`
+# in `inputs_dGcomplex.txt`
 
-FILE_LIST="dGcomplex_inputs.txt"
+FILE_LIST="inputs_dGcomplex.txt"
 if ! [ -s "$FILE_LIST" ]; then
     echo "$FILE_LIST is empty. Exiting."
     exit
