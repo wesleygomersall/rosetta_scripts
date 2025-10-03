@@ -1,3 +1,6 @@
 logs/
+pdb_inputs/
+output/
+
 inputs_cif2pdb.txt
 inputs_dGcomplex.txt
