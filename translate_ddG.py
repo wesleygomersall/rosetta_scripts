@@ -57,7 +57,11 @@ def main():
         return
 
     date_time_string = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    output_directory = date_time_string + "_ddGout_" + os.path.basename(args.input).split(".")[0] 
+    date_string = datetime.datetime.now().strftime("%Y%m%d")
+    output_parent_dirname = "output/" + date_string + "_deltaGoutput/"
+    output_sub_dirname = date_time_string + "_ddGout_" + os.path.basename(args.input).split(".")[0] 
+
+    output_directory = output_parent_dirname + output_sub_dirname
     if not os.path.exists(output_directory):
         os.makedirs(output_directory)
     

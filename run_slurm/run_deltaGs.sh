@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # This script initiates jobs with `deltaG_complex.slurm` for each input pdb file
-# in `inputs_dGcomplex.txt`
+# listed in `inputs_dGcomplex.txt`. It is important that each file in this list 
+# have a unique and identifying file name for output. 
 
 FILE_LIST="inputs_dGcomplex.txt"
 if ! [ -s "$FILE_LIST" ]; then
