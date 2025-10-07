@@ -13,70 +13,91 @@ The files output from that script should look like this:
 DesignNum,PeptideSequence,bound_dG,unbound_dG,ddG
 0,TGGRLGNRSGTQALGK,-993.2077853755554,-967.6941463143296,-25.51363906122583
 
-If there were rosetta-designed sequences, they appear in the same csv as more rows. Likely this plotting script will only ever want the first row.
-
-Old structure of these files had only two columns. 
-`comdn230-c16-13_model_dgoutput/out_energies.csv`:
-struct,energy
-/projects/parisahlab/wesg/af3_data/20250920_AF3_output/comdn230-c16-13/comdn230-c16-13_model.pdb_RAW,579.584659270761
-/projects/parisahlab/wesg/af3_data/20250920_AF3_output/comdn230-c16-13/comdn230-c16-13_model.pdb_relaxed,-636.2237708726736
-/projects/parisahlab/wesg/af3_data/20250920_AF3_output/comdn230-c16-13/comdn230-c16-13_model.pdb_translated,-620.6306885020979
-/projects/parisahlab/wesg/af3_data/20250920_AF3_output/comdn230-c16-13/comdn230-c16-13_model.pdb_diff,-15.593082370575758
+If there were rosetta-designed sequences, they appear in the same csv as more rows. 
+Likely this plotting script will only ever want the first row.
 '''
 
 # file_list must be a list of lists. Interior lists should contain all files with data to average.
-file_list = [
-        ["output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-13_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-13_seed-1_sample-0_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-13_seed-1_sample-1_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-13_seed-1_sample-2_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-13_seed-1_sample-3_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-13_seed-1_sample-4_model/out_energies.csv"],
 
-        ["output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-14_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-14_seed-1_sample-0_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-14_seed-1_sample-1_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-14_seed-1_sample-2_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-14_seed-1_sample-3_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-14_seed-1_sample-4_model/out_energies.csv"],
+def collect_ddGs(file_list: list, re_beginning, re_end, re_group= '_'):
+    '''
+    Produce a dictionary which gathers ddG output from multiple replicate 
+    outputs of `translate_ddG.py`. 
 
-        ["output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-15_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-15_seed-1_sample-0_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-15_seed-1_sample-1_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-15_seed-1_sample-2_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-15_seed-1_sample-3_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-15_seed-1_sample-4_model/out_energies.csv"],
+    PARAMETERS: 
+    file_list: list     List of strings pointing to all files. 
+    re_beginning: str   Regex string for first part of the file path to trim.
+    re_end: str         Regex string for last part of the file path to trim.
+    re_group: str       Separator for the sample+replicate name. 
+                        Default = '_' (<samplename>_<replicatename>)
+    '''
 
-        ["output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-16_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-16_seed-1_sample-0_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-16_seed-1_sample-1_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-16_seed-1_sample-2_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-16_seed-1_sample-3_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-16_seed-1_sample-4_model/out_energies.csv"],
-
-        ["output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-17_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-17_seed-1_sample-0_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184453_ddGout_sepmcsp16-17_seed-1_sample-4_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184454_ddGout_sepmcsp16-17_seed-1_sample-1_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184454_ddGout_sepmcsp16-17_seed-1_sample-2_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184454_ddGout_sepmcsp16-17_seed-1_sample-3_model/out_energies.csv"],
-
-        ["output/20251005_deltaGoutput/20251005-184455_ddGout_sepmcsp16-18_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184454_ddGout_sepmcsp16-18_seed-1_sample-0_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184455_ddGout_sepmcsp16-18_seed-1_sample-1_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184455_ddGout_sepmcsp16-18_seed-1_sample-2_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184455_ddGout_sepmcsp16-18_seed-1_sample-3_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184455_ddGout_sepmcsp16-18_seed-1_sample-4_model/out_energies.csv"],
+    ddGs = {}
+    for file in file_list: 
+        # regex shorten file path to get unique replicate name 
+        name = re.sub('^.*{}|{}.*$'.format(re_beginning, re_end), '', file)
+        # get non-unique name of replicates
+        reps_name = re.match('^[^{}]*'.format(re_group), name).group(0)
         
-        ["output/20251005_deltaGoutput/20251005-184455_ddGout_sepmcsp16_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184455_ddGout_sepmcsp16_seed-1_sample-0_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184454_ddGout_sepmcsp16_seed-1_sample-1_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184524_ddGout_sepmcsp16_seed-1_sample-2_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184525_ddGout_sepmcsp16_seed-1_sample-3_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184525_ddGout_sepmcsp16_seed-1_sample-4_model/out_energies.csv"]]
-            
+        df = pd.read_csv(file)
+        if reps_name not in ddGs: 
+            ddGs[reps_name] = [df.iloc[0,4]]
+        else: 
+            ddGs[reps_name].append(df.iloc[0, 4])
 
-def collect_ddGs_to_file(file_list: list):
+    return ddGs
+
+
+
+
+
+
+def test_things():
+    file_list = ["output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-13_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-13_seed-1_sample-0_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-13_seed-1_sample-1_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-13_seed-1_sample-2_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-13_seed-1_sample-3_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-13_seed-1_sample-4_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-14_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-14_seed-1_sample-0_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-14_seed-1_sample-1_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-14_seed-1_sample-2_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-14_seed-1_sample-3_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-14_seed-1_sample-4_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-15_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-15_seed-1_sample-0_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-15_seed-1_sample-1_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-15_seed-1_sample-2_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-15_seed-1_sample-3_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-15_seed-1_sample-4_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-16_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-16_seed-1_sample-0_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-16_seed-1_sample-1_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-16_seed-1_sample-2_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-16_seed-1_sample-3_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-16_seed-1_sample-4_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-17_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-17_seed-1_sample-0_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184453_ddGout_sepmcsp16-17_seed-1_sample-4_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184454_ddGout_sepmcsp16-17_seed-1_sample-1_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184454_ddGout_sepmcsp16-17_seed-1_sample-2_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184454_ddGout_sepmcsp16-17_seed-1_sample-3_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184455_ddGout_sepmcsp16-18_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184454_ddGout_sepmcsp16-18_seed-1_sample-0_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184455_ddGout_sepmcsp16-18_seed-1_sample-1_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184455_ddGout_sepmcsp16-18_seed-1_sample-2_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184455_ddGout_sepmcsp16-18_seed-1_sample-3_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184455_ddGout_sepmcsp16-18_seed-1_sample-4_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184455_ddGout_sepmcsp16_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184455_ddGout_sepmcsp16_seed-1_sample-0_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184454_ddGout_sepmcsp16_seed-1_sample-1_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184524_ddGout_sepmcsp16_seed-1_sample-2_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184525_ddGout_sepmcsp16_seed-1_sample-3_model/out_energies.csv",
+                 "output/20251005_deltaGoutput/20251005-184525_ddGout_sepmcsp16_seed-1_sample-4_model/out_energies.csv"]
+    ddGs = collect_ddGs(file_list, "ddGout", "_model", "_")
+
+def collect_ddG_means_to_file(file_list: list, write_file: bool = False):
     with open("deltadeltaGs.tsv", 'w') as fout: 
         fout.write("structure\tddG\n")
         for files in file_list: 
@@ -101,7 +122,7 @@ def collect_ddGs_to_file(file_list: list):
             # to the below
             # fout.write(f"{name}\t{ddG_list}\n")
 
-def plot_dGs(filename: str): 
+def plot_dGs_barplot(filename: str): 
     plt.clf()
     df = pd.read_csv(filename, sep='\t')
     fig, ax = plt.subplots()
@@ -113,8 +134,55 @@ def plot_dGs(filename: str):
     ax.set_ylabel('ddG')
     ax.set_title('Delta Delta G: CSP variants')
     plt.subplots_adjust(bottom=0.4) 
-    plt.savefig("ddG_figure.pdf", format="pdf")
+    plt.savefig("ddG_figure_bar.pdf", format="pdf")
+
+def main():
+    file_list_of_lists = [
+        ["output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-13_model/out_energies.csv",
+         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-13_seed-1_sample-0_model/out_energies.csv",
+         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-13_seed-1_sample-1_model/out_energies.csv",
+         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-13_seed-1_sample-2_model/out_energies.csv",
+         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-13_seed-1_sample-3_model/out_energies.csv",
+         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-13_seed-1_sample-4_model/out_energies.csv"],
+        ["output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-14_model/out_energies.csv",
+         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-14_seed-1_sample-0_model/out_energies.csv",
+         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-14_seed-1_sample-1_model/out_energies.csv",
+         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-14_seed-1_sample-2_model/out_energies.csv",
+         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-14_seed-1_sample-3_model/out_energies.csv",
+         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-14_seed-1_sample-4_model/out_energies.csv"],
+        ["output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-15_model/out_energies.csv",
+         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-15_seed-1_sample-0_model/out_energies.csv",
+         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-15_seed-1_sample-1_model/out_energies.csv",
+         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-15_seed-1_sample-2_model/out_energies.csv",
+         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-15_seed-1_sample-3_model/out_energies.csv",
+         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-15_seed-1_sample-4_model/out_energies.csv"],
+        ["output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-16_model/out_energies.csv",
+         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-16_seed-1_sample-0_model/out_energies.csv",
+         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-16_seed-1_sample-1_model/out_energies.csv",
+         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-16_seed-1_sample-2_model/out_energies.csv",
+         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-16_seed-1_sample-3_model/out_energies.csv",
+         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-16_seed-1_sample-4_model/out_energies.csv"],
+        ["output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-17_model/out_energies.csv",
+         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-17_seed-1_sample-0_model/out_energies.csv",
+         "output/20251005_deltaGoutput/20251005-184453_ddGout_sepmcsp16-17_seed-1_sample-4_model/out_energies.csv",
+         "output/20251005_deltaGoutput/20251005-184454_ddGout_sepmcsp16-17_seed-1_sample-1_model/out_energies.csv",
+         "output/20251005_deltaGoutput/20251005-184454_ddGout_sepmcsp16-17_seed-1_sample-2_model/out_energies.csv",
+         "output/20251005_deltaGoutput/20251005-184454_ddGout_sepmcsp16-17_seed-1_sample-3_model/out_energies.csv"],
+        ["output/20251005_deltaGoutput/20251005-184455_ddGout_sepmcsp16-18_model/out_energies.csv",
+         "output/20251005_deltaGoutput/20251005-184454_ddGout_sepmcsp16-18_seed-1_sample-0_model/out_energies.csv",
+         "output/20251005_deltaGoutput/20251005-184455_ddGout_sepmcsp16-18_seed-1_sample-1_model/out_energies.csv",
+         "output/20251005_deltaGoutput/20251005-184455_ddGout_sepmcsp16-18_seed-1_sample-2_model/out_energies.csv",
+         "output/20251005_deltaGoutput/20251005-184455_ddGout_sepmcsp16-18_seed-1_sample-3_model/out_energies.csv",
+         "output/20251005_deltaGoutput/20251005-184455_ddGout_sepmcsp16-18_seed-1_sample-4_model/out_energies.csv"],
+        ["output/20251005_deltaGoutput/20251005-184455_ddGout_sepmcsp16_model/out_energies.csv",
+         "output/20251005_deltaGoutput/20251005-184455_ddGout_sepmcsp16_seed-1_sample-0_model/out_energies.csv",
+         "output/20251005_deltaGoutput/20251005-184454_ddGout_sepmcsp16_seed-1_sample-1_model/out_energies.csv",
+         "output/20251005_deltaGoutput/20251005-184524_ddGout_sepmcsp16_seed-1_sample-2_model/out_energies.csv",
+         "output/20251005_deltaGoutput/20251005-184525_ddGout_sepmcsp16_seed-1_sample-3_model/out_energies.csv",
+         "output/20251005_deltaGoutput/20251005-184525_ddGout_sepmcsp16_seed-1_sample-4_model/out_energies.csv"]]
+    collect_ddG_means_to_file(file_list_of_lists)
+    plot_dGs_barplot("deltadeltaGs.tsv")
 
 if __name__ == "__main__":
-    collect_ddGs_to_file(file_list)
-    plot_dGs("deltadeltaGs.tsv")
+    # main()
+    test_things()
