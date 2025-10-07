@@ -17,21 +17,21 @@ If there were rosetta-designed sequences, they appear in the same csv as more ro
 Likely this plotting script will only ever want the first row.
 '''
 
-# file_list must be a list of lists. Interior lists should contain all files with data to average.
-
 def collect_ddGs(file_list: list, re_beginning, re_end, re_group= '_'):
     '''
     Produce a dictionary which gathers ddG output from multiple replicate 
     outputs of `translate_ddG.py`. 
 
     PARAMETERS: 
-    file_list: list     List of strings pointing to all files. 
+    file_list: list     List of string addresses of all files. 
     re_beginning: str   Regex string for first part of the file path to trim.
+                        Must end in '_'.
     re_end: str         Regex string for last part of the file path to trim.
     re_group: str       Separator for the sample+replicate name. 
                         Default = '_' (<samplename>_<replicatename>)
     '''
-
+    assert re_beginning[-1] == '_'
+         
     ddGs = {}
     for file in file_list: 
         # regex shorten file path to get unique replicate name 
@@ -40,19 +40,71 @@ def collect_ddGs(file_list: list, re_beginning, re_end, re_group= '_'):
         reps_name = re.match('^[^{}]*'.format(re_group), name).group(0)
         
         df = pd.read_csv(file)
+        # get 1st row, 5th column entry (0, 4)
         if reps_name not in ddGs: 
             ddGs[reps_name] = [df.iloc[0,4]]
         else: 
             ddGs[reps_name].append(df.iloc[0, 4])
-
     return ddGs
 
+def sort_dict_entries(dictionary): 
+    ordered_keys = sorted(list(dictionary.keys()))
+    corresponding_values = [dictionary[key] for key in ordered_keys]
+    return ordered_keys, corresponding_values
 
+def dict_to_file(dictionary, filename, sep = ",", header = ""):
+    ordered_keys = sorted(list(dictionary.keys()))
 
+    with open(filename, 'w') as fout: 
+        if header != '': 
+            fout.write(f"{header}\n")
+        for key in ordered_keys: 
+            fout.write(f"{key}")
+            for item in dictionary[key]:
+                fout.write(f"{sep}{item}")
+            fout.write('\n')
 
+def plot_boxes_from_dict(data_dictionary):
+    '''
+    Plots boxes for each list of values in dictionary.
+    '''
+    labels, ordered_data = sort_dict_entries(data_dictionary)
 
+    plt.clf()
+    fig, ax = plt.subplots()
+    ax.boxplot(ordered_data) 
 
-def test_things():
+    ax.set_xlabel('Variant')
+    ax.set_xticks(range(1, len(labels)+1), labels, rotation='vertical')
+    ax.set_ylabel('ddG')
+    ax.set_title('Delta Delta G: CSP variants')
+
+    plt.subplots_adjust(bottom=0.4) 
+    plt.savefig("ddG_figure_boxes._df", format="pdf")
+
+def plot_bars_from_dict(data_series):
+    '''
+    Plots bar charts of means for each list of values in dictionary.
+    '''
+    labels, ordered_data = sort_dict_entries(data_series)
+    
+    means = []
+    for val_list in ordered_data: 
+        means.append(np.mean(val_list))
+
+    plt.clf()
+    fig, ax = plt.subplots()
+    ax.bar(range(len(labels)),means)
+
+    ax.set_xlabel('Variant')
+    ax.set_xticks(range(1, len(labels)+1), labels, rotation='vertical')
+    ax.set_ylabel('ddG')
+    ax.set_title('Delta Delta G: CSP variants')
+
+    plt.subplots_adjust(bottom=0.4) 
+    plt.savefig("ddG_figure_bars.pdf", format="pdf")
+
+def main():
     file_list = ["output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-13_model/out_energies.csv",
                  "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-13_seed-1_sample-0_model/out_energies.csv",
                  "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-13_seed-1_sample-1_model/out_energies.csv",
@@ -95,94 +147,10 @@ def test_things():
                  "output/20251005_deltaGoutput/20251005-184524_ddGout_sepmcsp16_seed-1_sample-2_model/out_energies.csv",
                  "output/20251005_deltaGoutput/20251005-184525_ddGout_sepmcsp16_seed-1_sample-3_model/out_energies.csv",
                  "output/20251005_deltaGoutput/20251005-184525_ddGout_sepmcsp16_seed-1_sample-4_model/out_energies.csv"]
-    ddGs = collect_ddGs(file_list, "ddGout", "_model", "_")
-
-def collect_ddG_means_to_file(file_list: list, write_file: bool = False):
-    with open("deltadeltaGs.tsv", 'w') as fout: 
-        fout.write("structure\tddG\n")
-        for files in file_list: 
-            sum = 0
-            numfiles = 0
-            # name = files[0].split("_fixed_dgoutput")[0]
-            name = re.search(r'_ddGout_' + r'(.*?)' + r'_model.', files[0], re.DOTALL).group(0)
-            
-            name = re.sub(r"_ddGout_", '', name)
-            name = re.sub(r"_model.$", '', name)
-            print(files[0])
-            print(name)
-            ddG_list = []
-            for file in files:
-                df = pd.read_csv(file)
-                ddG_list.append(df.iloc[0, 4])
-
-            print(ddG_list)
-            ddG_mean = np.mean(ddG_list) / len(ddG_list) 
-            # change this!
-            fout.write(f"{name}\t{ddG_mean}\n")
-            # to the below
-            # fout.write(f"{name}\t{ddG_list}\n")
-
-def plot_dGs_barplot(filename: str): 
-    plt.clf()
-    df = pd.read_csv(filename, sep='\t')
-    fig, ax = plt.subplots()
-    labels = df['structure']
-    ax.bar(range(len(labels)),df['ddG'])
-
-    ax.set_xlabel('Variant')
-    ax.set_xticks(range(len(labels)), labels, rotation='vertical')
-    ax.set_ylabel('ddG')
-    ax.set_title('Delta Delta G: CSP variants')
-    plt.subplots_adjust(bottom=0.4) 
-    plt.savefig("ddG_figure_bar.pdf", format="pdf")
-
-def main():
-    file_list_of_lists = [
-        ["output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-13_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-13_seed-1_sample-0_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-13_seed-1_sample-1_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-13_seed-1_sample-2_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-13_seed-1_sample-3_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-13_seed-1_sample-4_model/out_energies.csv"],
-        ["output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-14_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-14_seed-1_sample-0_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-14_seed-1_sample-1_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-14_seed-1_sample-2_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-14_seed-1_sample-3_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-14_seed-1_sample-4_model/out_energies.csv"],
-        ["output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-15_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-15_seed-1_sample-0_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-15_seed-1_sample-1_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-15_seed-1_sample-2_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-15_seed-1_sample-3_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-15_seed-1_sample-4_model/out_energies.csv"],
-        ["output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-16_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-16_seed-1_sample-0_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-16_seed-1_sample-1_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-16_seed-1_sample-2_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-16_seed-1_sample-3_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-16_seed-1_sample-4_model/out_energies.csv"],
-        ["output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-17_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184439_ddGout_sepmcsp16-17_seed-1_sample-0_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184453_ddGout_sepmcsp16-17_seed-1_sample-4_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184454_ddGout_sepmcsp16-17_seed-1_sample-1_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184454_ddGout_sepmcsp16-17_seed-1_sample-2_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184454_ddGout_sepmcsp16-17_seed-1_sample-3_model/out_energies.csv"],
-        ["output/20251005_deltaGoutput/20251005-184455_ddGout_sepmcsp16-18_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184454_ddGout_sepmcsp16-18_seed-1_sample-0_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184455_ddGout_sepmcsp16-18_seed-1_sample-1_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184455_ddGout_sepmcsp16-18_seed-1_sample-2_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184455_ddGout_sepmcsp16-18_seed-1_sample-3_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184455_ddGout_sepmcsp16-18_seed-1_sample-4_model/out_energies.csv"],
-        ["output/20251005_deltaGoutput/20251005-184455_ddGout_sepmcsp16_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184455_ddGout_sepmcsp16_seed-1_sample-0_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184454_ddGout_sepmcsp16_seed-1_sample-1_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184524_ddGout_sepmcsp16_seed-1_sample-2_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184525_ddGout_sepmcsp16_seed-1_sample-3_model/out_energies.csv",
-         "output/20251005_deltaGoutput/20251005-184525_ddGout_sepmcsp16_seed-1_sample-4_model/out_energies.csv"]]
-    collect_ddG_means_to_file(file_list_of_lists)
-    plot_dGs_barplot("deltadeltaGs.tsv")
+    ddGs = collect_ddGs(file_list, "ddGout_", "_model", "_")
+    dict_to_file(ddGs, filename="all_ddGs.csv" header = "replicate_group,REUs,...\n")
+    plot_boxes_from_dict(ddGs)
+    plot_bars_from_dict(ddGs)
 
 if __name__ == "__main__":
-    # main()
-    test_things()
+    main()
