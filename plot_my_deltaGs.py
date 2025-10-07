@@ -80,7 +80,7 @@ def plot_boxes_from_dict(data_dictionary):
     ax.set_title('Delta Delta G: CSP variants')
 
     plt.subplots_adjust(bottom=0.4) 
-    plt.savefig("ddG_figure_boxes._df", format="pdf")
+    plt.savefig("ddG_figure_boxes.pdf", format="pdf")
 
 def plot_bars_from_dict(data_series):
     '''
@@ -148,7 +148,7 @@ def main():
                  "output/20251005_deltaGoutput/20251005-184525_ddGout_sepmcsp16_seed-1_sample-3_model/out_energies.csv",
                  "output/20251005_deltaGoutput/20251005-184525_ddGout_sepmcsp16_seed-1_sample-4_model/out_energies.csv"]
     ddGs = collect_ddGs(file_list, "ddGout_", "_model", "_")
-    dict_to_file(ddGs, filename="all_ddGs.csv" header = "replicate_group,REUs,...\n")
+    dict_to_file(ddGs, filename="all_ddGs.csv", header = "replicate_group,REUs,...\n")
     plot_boxes_from_dict(ddGs)
     plot_bars_from_dict(ddGs)
 
