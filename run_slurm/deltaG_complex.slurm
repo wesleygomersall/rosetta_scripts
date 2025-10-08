@@ -9,8 +9,6 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --time=12:00:00           
 #SBATCH --mem=16G
-#SBATCH --mail-type=END
-#SBATCH --mail-user=wesg@uoregon.edu
 
 if [ $# != 1 ]; then
     echo "Supply 1 argument: path/to/input.pdb"
