@@ -43,6 +43,7 @@ def main():
     parser.add_argument("--dump", action="store_true", default=False, help="Dump pre and post-translated poses to pdb") 
     parser.add_argument("--design", action="store_true", default=False, help="Design new peptide sequences.") 
     parser.add_argument("--nstructs", type=int, default=0, help="Number of designs to perform. If not using --design option, this adds replicates to the translate step.")
+    parser.add_argument("--debug", action="store_true", default=False, help="Debug mode, dont apply relax/design instead print packers") 
     args = parser.parse_args()
     
     if args.nstructs < 1 and args.design:
@@ -71,7 +72,7 @@ def main():
     print(f"Input structure score: {input_score}")
 
     relaxed_input = input_pose.clone()
-    if args.refine: 
+    if args.refine and not args.debug: 
         relax.apply(relaxed_input) 
         relaxed_score = scorefxn(relaxed_input)
         print(f"Relaxed score: {relaxed_score}")
@@ -131,10 +132,11 @@ def main():
             tf_new.push_back(operation.OperateOnResidueSubset( 
                 operation.RestrictToRepackingRLT(), chB_selector)) 
             
-        # Convert to PackerTask to view
-        print("before move")
-        packer_task = tf_new.create_task_and_apply_taskoperations(test_pose)
-        print(packer_task)
+        if args.debug: 
+            # Convert tf to PackerTask to view
+            print("before move")
+            packer_task = tf_new.create_task_and_apply_taskoperations(test_pose)
+            print(packer_task)
 
         mm = MoveMap()
         mm.set_bb(True)
@@ -147,7 +149,8 @@ def main():
         rel_design.set_movemap(mm)
         rel_design.minimize_bond_angles(True)
         rel_design.minimize_bond_lengths(True)
-        # rel_design.apply(test_pose) 
+        if not args.debug: 
+            rel_design.apply(test_pose) 
         
         all_peptide_sequence.append(test_pose.chain_sequence(2))
         print(f"Peptide: {all_peptide_sequence[-1]}") 
@@ -167,12 +170,14 @@ def main():
             operation.RestrictToRepackingRLT(), stored_interface)) 
         rel_design.set_task_factory(tf_new)
 
-        print("after move")
-        packer_task = tf_new.create_task_and_apply_taskoperations(test_pose)
-        print(packer_task)
+        if args.debug: 
+            print("after move")
+            packer_task = tf_new.create_task_and_apply_taskoperations(test_pose)
+            print(packer_task)
 
-        # Re-relax without design
-        # rel_design.apply(test_pose) 
+        if not args.debug: 
+            # Re-relax without design
+            rel_design.apply(test_pose) 
 
         all_unbound_dG.append(scorefxn(test_pose))
         print(f"Unbound score: {all_unbound_dG[-1]}")
