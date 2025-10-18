@@ -10,7 +10,7 @@
 #SBATCH --time=12:00:00           
 #SBATCH --mem=16G
 
-if [ $# != 1 ]; then
+if [ $# != 2 ]; then
     echo "Supply 2 arguments: path/to/input.pdb nstructs"
     exit
 fi
