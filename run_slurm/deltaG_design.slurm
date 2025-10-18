@@ -17,15 +17,12 @@ if [ $# != 2 ]; then
     exit
 fi
 
-INPUT_PDB=$1
-NUMDESIGNS=$2
-
 source ~/miniforge3/etc/profile.d/conda.sh # for conda to work
 conda activate pyrosetta
 
 python3 $HOME/rosetta_scripts/translate_ddG.py \
-    --input $INPUT_PDB \
+    --input $1 \
     --refine \
     --dump \
     --design \
-    --ndesigns $NUMDESIGNS
+    --nstructs $2

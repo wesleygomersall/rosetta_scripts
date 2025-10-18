@@ -11,16 +11,15 @@
 #SBATCH --mem=16G
 
 if [ $# != 1 ]; then
-    echo "Supply 1 argument: path/to/input.pdb"
+    echo "Supply 2 arguments: path/to/input.pdb nstructs"
     exit
 fi
-
-INPUT_PDB=$1
 
 source ~/miniforge3/etc/profile.d/conda.sh # for conda to work
 conda activate pyrosetta
 
 python3 $HOME/rosetta_scripts/translate_ddG.py \
-    --input $INPUT_PDB \
+    --input $1 \
     --refine \
-    --dump
+    --dump \
+    --nstructs $2

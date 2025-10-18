@@ -13,7 +13,7 @@ fi
 SLURM_SCRIPT="$HOME/rosetta_scripts/run_slurm/deltaG_complex.slurm"
 
 for file in $(cat $FILE_LIST); do
-    sbatch $SLURM_SCRIPT $file
+    sbatch $SLURM_SCRIPT $file 10
 done
 
 exit
