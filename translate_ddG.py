@@ -163,7 +163,7 @@ def main():
         unbind(test_pose, "A_B")
 
         # Always want to avoid re-designing sequence after unbinding
-        tf.push_back(operation.OperateOnResidueSubset( 
+        tf_new.push_back(operation.OperateOnResidueSubset( 
             operation.RestrictToRepackingRLT(), stored_interface)) 
         rel_design.set_task_factory(tf_new)
 
