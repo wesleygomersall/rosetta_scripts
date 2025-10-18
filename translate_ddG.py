@@ -11,6 +11,8 @@ from pyrosetta.rosetta.core.pack.task import TaskFactory, operation
 from pyrosetta.rosetta.protocols.relax import ClassicRelax
 from pyrosetta.rosetta.protocols.rigid import RigidBodyTransMover
 from pyrosetta.rosetta.protocols.docking import setup_foldtree
+from pyrosetta.rosetta.protocols.residue_selectors import StoredResidueSubsetSelector, StoreResidueSubsetMover
+
 init("-mute all")
 
 def unbind(pose, partners):
@@ -37,19 +39,13 @@ def unbind(pose, partners):
 def main(): 
     parser = argparse.ArgumentParser(description="Calculate scores for relaxed protein-peptide complex and for translated peptide")
     parser.add_argument("--input", "-i", type=str, help="Path to input pdb file.")
-    parser.add_argument("--refine", action="store_true", default=False, help="Relax structure, default will not.") 
+    parser.add_argument("--refine", action="store_true", default=False, help="Relax input structure, default will not.") 
     parser.add_argument("--dump", action="store_true", default=False, help="Dump pre and post-translated poses to pdb") 
     parser.add_argument("--design", action="store_true", default=False, help="Design new peptide sequences.") 
-    parser.add_argument("--ndesigns", type=int, default=0, help="Number of designs.")
+    parser.add_argument("--nstructs", type=int, default=0, help="Number of designs to perform. If not using --design option, this adds replicates to the translate step.")
     args = parser.parse_args()
     
-    if args.ndesigns > 0 and not args.design:
-        print("Incompatible arguments: \
-              Design sequences option not specified, \
-              but number of designs not also zero. \
-              Reassigning --ndesigns to zero.")
-        args.ndesigns = 0 
-    if args.ndesigns < 1 and args.design:
+    if args.nstructs < 1 and args.design:
         print("Incompatible arguments: \
               Design sequences option specified, \
               but number of designs is less than 1. \
@@ -89,39 +85,69 @@ def main():
     all_unbound_dG = []
     all_ddG = []
 
-    for structnum in range(0, args.ndesigns + 1):
+    # https://github.com/RosettaCommons/PyRosetta.notebooks/blob/master/notebooks/06.02-Packing-design-and-regional-relax.ipynb
+    # https://nbviewer.org/github/RosettaCommons/PyRosetta.notebooks/blob/master/notebooks/06.04-Protein-Design-2.ipynb
+    tf = TaskFactory()
+    tf.clear()
+    tf.push_back(operation.InitializeFromCommandline())
+
+    chA_selector = residue_selector.ChainSelector("A")   
+    chB_selector = residue_selector.NotResidueSelector(chA_selector)
+
+    nbr_selector = residue_selector.NeighborhoodResidueSelector()
+    nbr_selector.set_focus_selector(chB_selector)
+    nbr_selector.set_include_focus_in_subset(False)
+
+    interface_selector = residue_selector.OrResidueSelector()
+    interface_selector.add_residue_selector(nbr_selector)
+    interface_selector.add_residue_selector(chB_selector)
+
+    stored_interface = StoredResidueSubsetSelector("neighbor_pre_translation")
+
+    # Generate selection storage & apply
+    store_mover = StoreResidueSubsetMover(interface_selector,
+                                          "neighbor_pre_translation",
+                                          True
+                                          )
+    store_mover.apply(relaxed_input)
+
+    # prevent repacking on everything outside of nbr_selector & chB
+    tf.push_back(operation.OperateOnResidueSubset(
+        operation.PreventRepackingRLT(), stored_interface, True ))
+
+    # for chain A neighbors of chain B, repack only
+    tf.push_back(operation.OperateOnResidueSubset( 
+        operation.RestrictToRepackingRLT(), nbr_selector)) 
+
+    for structnum in range(0, args.nstructs + 1):
         print(f"\nStructure: {structnum}")
         all_structnum.append(structnum)
         
         test_pose = relaxed_input.clone()
+        
+        tf_new = tf.clone()
 
-        if structnum != 0 and args.design:
-            # https://github.com/RosettaCommons/PyRosetta.notebooks/blob/master/notebooks/06.02-Packing-design-and-regional-relax.ipynb
-            # https://nbviewer.org/github/RosettaCommons/PyRosetta.notebooks/blob/master/notebooks/06.04-Protein-Design-2.ipynb
-            chain_A = residue_selector.ChainSelector("A")   
-            tf = TaskFactory()
-            tf.push_back(operation.InitializeFromCommandline())
-            tf.push_back(operation.IncludeCurrent())
-            # Disable packing and design of chain A
-            tf.push_back(operation.OperateOnResidueSubset( 
-                operation.PreventRepackingRLT(), chain_A)) 
+        if structnum == 0 or not args.design: # also restrict Chain B to repack only
+            tf_new.push_back(operation.OperateOnResidueSubset( 
+                operation.RestrictToRepackingRLT(), chB_selector)) 
+            
+        # Convert to PackerTask to view
+        print("before move")
+        packer_task = tf_new.create_task_and_apply_taskoperations(test_pose)
+        print(packer_task)
 
-            # Convert to PackerTask to view
-            # packer_task = tf.create_task_and_apply_taskoperations(test_pose)
-            # if structnum == 1: print(packer_task)
+        mm = MoveMap()
+        mm.set_bb(True)
+        mm.set_chi(True)
+        mm.set_jump(True)
 
-            mm = MoveMap()
-            mm.set_bb(True)
-            mm.set_chi(True)
-            mm.set_jump(True)
-
-            rel_design = pyrosetta.rosetta.protocols.relax.FastRelax(scorefxn_in=scorefxn, standard_repeats=1, script_file="MonomerDesign2019")
-            rel_design.cartesian(True)
-            rel_design.set_task_factory(tf)
-            rel_design.set_movemap(mm)
-            rel_design.minimize_bond_angles(True)
-            rel_design.minimize_bond_lengths(True)
-            rel_design.apply(test_pose) 
+        rel_design = pyrosetta.rosetta.protocols.relax.FastRelax(scorefxn_in=scorefxn, standard_repeats=1, script_file="MonomerDesign2019")
+        rel_design.cartesian(True)
+        rel_design.set_task_factory(tf_new)
+        rel_design.set_movemap(mm)
+        rel_design.minimize_bond_angles(True)
+        rel_design.minimize_bond_lengths(True)
+        # rel_design.apply(test_pose) 
         
         all_peptide_sequence.append(test_pose.chain_sequence(2))
         print(f"Peptide: {all_peptide_sequence[-1]}") 
@@ -136,8 +162,17 @@ def main():
         
         unbind(test_pose, "A_B")
 
-        if args.refine: 
-            relax.apply(test_pose) 
+        # Always want to avoid re-designing sequence after unbinding
+        tf.push_back(operation.OperateOnResidueSubset( 
+            operation.RestrictToRepackingRLT(), stored_interface)) 
+        rel_design.set_task_factory(tf_new)
+
+        print("after move")
+        packer_task = tf_new.create_task_and_apply_taskoperations(test_pose)
+        print(packer_task)
+
+        # Re-relax without design
+        # rel_design.apply(test_pose) 
 
         all_unbound_dG.append(scorefxn(test_pose))
         print(f"Unbound score: {all_unbound_dG[-1]}")
