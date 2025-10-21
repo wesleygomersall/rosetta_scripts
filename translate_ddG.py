@@ -36,6 +36,28 @@ def unbind(pose, partners):
     trans_mover.step_size(100)
     trans_mover.apply(pose)
 
+def total_scores_by_term(scorefunction, pose, outfilepath = None):
+    """
+    Score pose and return a breakdown of all the (non-zero weighted) energy
+    term weights and scores. If a file path is given then output this list to 
+    file. 
+    """
+
+    score_breakdown = []
+    scorefunction(pose)
+
+    for term in scorefunction.get_nonzero_weighted_scoretypes():
+        term_score = pose.energies().total_energies()[term]
+        weight = scorefunction.get_weight(term)
+        score_breakdown.append((term, weight, term_score))
+    if outfilepath != None: 
+        assert type(outfilepath) == str
+        with open(outfilepath, 'w') as fout: 
+            fout.write("EnergyTerm,Weight,Score\n")
+            for term in score_breakdown: 
+                fout.write(f"{term[0]},{term[1]},{term[2]}\n")
+    return score_breakdown
+
 def main(): 
     parser = argparse.ArgumentParser(description="Calculate scores for relaxed protein-peptide complex and for translated peptide")
     parser.add_argument("--input", "-i", type=str, help="Path to input pdb file.")
@@ -69,6 +91,7 @@ def main():
     print(f"Input pose: {args.input}")
     input_pose = pose_from_pdb(args.input)
     input_score = scorefxn(input_pose)
+    total_scores_by_term(scorefxn, input_pose, outfilepath = f"{output_directory}/input_scores.csv"):
     print(f"Input structure score: {input_score}")
 
     relaxed_input = input_pose.clone()
@@ -162,6 +185,9 @@ def main():
         if args.dump:
             pre_translated_out_path = f"{output_directory}/structure{structnum}_relaxed.pdb"
             test_pose.dump_pdb(pre_translated_out_path)
+
+        total_scores_by_term(scorefxn, test_pose, 
+                            f"{output_directory}/structure{structnum}_bound_scores.csv"):
         
         unbind(test_pose, "A_B")
 
@@ -185,6 +211,9 @@ def main():
         if args.dump: 
             translated_out_path = f"{output_directory}/structure{structnum}_translated.pdb"
             test_pose.dump_pdb(translated_out_path)
+
+        total_scores_by_term(scorefxn, test_pose, 
+                            f"{output_directory}/structure{structnum}_unbound_scores.csv"):
 
         all_ddG.append(all_bound_dG[-1] - all_unbound_dG[-1])
         print(f"ddG: {all_ddG[-1]}")
