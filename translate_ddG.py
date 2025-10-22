@@ -91,7 +91,7 @@ def main():
     print(f"Input pose: {args.input}")
     input_pose = pose_from_pdb(args.input)
     input_score = scorefxn(input_pose)
-    total_scores_by_term(scorefxn, input_pose, outfilepath = f"{output_directory}/input_scores.csv"):
+    total_scores_by_term(scorefxn, input_pose, outfilepath = f"{output_directory}/input_scores.csv")
     print(f"Input structure score: {input_score}")
 
     relaxed_input = input_pose.clone()
@@ -187,7 +187,7 @@ def main():
             test_pose.dump_pdb(pre_translated_out_path)
 
         total_scores_by_term(scorefxn, test_pose, 
-                            f"{output_directory}/structure{structnum}_bound_scores.csv"):
+                            f"{output_directory}/structure{structnum}_bound_scores.csv")
         
         unbind(test_pose, "A_B")
 
@@ -213,7 +213,7 @@ def main():
             test_pose.dump_pdb(translated_out_path)
 
         total_scores_by_term(scorefxn, test_pose, 
-                            f"{output_directory}/structure{structnum}_unbound_scores.csv"):
+                            f"{output_directory}/structure{structnum}_unbound_scores.csv")
 
         all_ddG.append(all_bound_dG[-1] - all_unbound_dG[-1])
         print(f"ddG: {all_ddG[-1]}")
