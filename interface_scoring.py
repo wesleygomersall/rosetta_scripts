@@ -12,7 +12,7 @@ from pyrosetta.rosetta.protocols.analysis import InterfaceAnalyzerMover
 
 parser = argparse.ArgumentParser(description="")
 parser.add_argument("--input", "-i", type=str, help="Input pdb file for interface scoring.")
-parser.add_argument("--debug", action="store_true", default=False, help="Debug will output poses.")
+parser.add_argument("--debug", action="store_true", default=False, help="Debug will output poses.") 
 args = parser.parse_args()
 
 print(args.input)
@@ -40,7 +40,7 @@ def sc_score_per_res(input_pose,
         # score interface between single residue and target
         interface = f"A_B:{res_num}" # not for input to score_interface
         ifs = score_interface(test_pose, "A_B")
-        interface_scores.append((res_num, binder_resis[res_num - 1], interface, ifs.sc_value))
+        interface_scores.append([res_num, binder_resis[res_num - 1], interface, ifs.sc_value])
 
         if debug: test_pose.dump_pdb(f"test_{interface}.pdb")
 
@@ -80,7 +80,10 @@ def main():
 
     myscores = sc_score_per_res(pose, debug = args.debug)
 
-    print(myscores)
+    with open(f"{args.input.strip('.pdb')}_sc_per_res.csv", 'w') as fout:
+        fout.write(f"Residue_number,Residue,Interface,sc_value\n")
+        for item in myscores:
+            fout.write(','.join(map(str, item)) + '\n')
 
 if __name__ == "__main__":
     main()
