@@ -1,6 +1,7 @@
 #!/usr/bin/env python3 
 
 import argparse
+import numpy as np
 import pyrosetta as pr
 from pyrosetta.rosetta.core.scoring.packstat import pose_to_pack_data, compute_residue_packing_score
 
@@ -13,7 +14,8 @@ pr.init()
 
 def packstat_per_res(input_pose, 
                      target_chainid = 1,
-                     binder_chainid = 2):
+                     binder_chainid = 2,
+                     nreps = 10):
 
     target_resis = input_pose.chain_sequence(target_chainid)
     binder_resis = input_pose.chain_sequence(binder_chainid)
@@ -23,16 +25,18 @@ def packstat_per_res(input_pose,
     packdata = pose_to_pack_data(input_pose)
     print()
 
-    interface_scores = []
+    results = []
+    res_info = []
+    for i in range(nreps):
+        interface_scores = []
+        for res_num in range(start_index, end_index):
+            interface_scores.append(compute_residue_packing_score(packdata, res_num))
+            if i == 0: res_info.append((res_num, input_pose.residue(res_num).name3()))
+        results.append(interface_scores)
 
-    for res_num in range(start_index, end_index):
-        interface_scores.append((res_num, 
-                                 input_pose.residue(res_num).name3(), 
-                                 compute_residue_packing_score(packdata, res_num),
-                                 ))
+    averages = np.array(results).mean(axis=0) # element-wise ave
 
-
-    return interface_scores
+    return [(res[0], res[1], score) for res, score in zip(res_info, averages)]
 
 def main():
     pdb_file = args.input
