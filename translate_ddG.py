@@ -220,25 +220,26 @@ def main():
         all_unbound_dG.append(scorefxn(test_pose))
         print(f"Unbound score: {all_unbound_dG[-1]}")
 
-        if args.dump: 
-            if args.perres_ddg: 
-                n_resis = test_pose.size()  
-                # get per res dG
-                ddG_perres = []
-                pdb_info = bound_test_pose.pdb_info()
-                for i in range(1, n_resis + 1):
-                    bound_res_energy = bound_score.residue_total_energy(i)
-                    unbound_res_energy = unbound_score.residue_total_energy(i)
-                    # Calculate the delta delta G for this specific residue
-                    residue_ddg = bound_res_energy - unbound_res_energy 
-                    ddG_perres.append((i, input_pose.residue(i).name(), residue_ddg))
-                    
-                    # assign to b_factor
-                    for atom_j in range(1, test_pose.residue(i).natoms() + 1):
-                        pdb_info.temperature(i, atom_j, residue_ddg)
-                    perresddG_out_path = f"{output_directory}/structure{structnum}_perresddg.pdb"
-                    bound_test_pose.dump_pdb(perresddG_out_path)
+        if args.perres_ddg: 
+            # dump a pdb (bound pose) with the per residue ddG as b factor
+            n_resis = test_pose.size()  
+            # get per res dG
+            ddG_perres = []
+            pdb_info = bound_test_pose.pdb_info()
+            for i in range(1, n_resis + 1):
+                bound_res_energy = bound_score.residue_total_energy(i)
+                unbound_res_energy = unbound_score.residue_total_energy(i)
+                # Calculate the delta delta G for this specific residue
+                residue_ddg = bound_res_energy - unbound_res_energy 
+                ddG_perres.append((i, input_pose.residue(i).name(), residue_ddg))
+                
+                # assign to b_factor
+                for atom_j in range(1, test_pose.residue(i).natoms() + 1):
+                    pdb_info.temperature(i, atom_j, residue_ddg)
+                perresddG_out_path = f"{output_directory}/structure{structnum}_perresddg.pdb"
+                bound_test_pose.dump_pdb(perresddG_out_path)
 
+        if args.dump: 
             translated_out_path = f"{output_directory}/structure{structnum}_translated.pdb"
             test_pose.dump_pdb(translated_out_path)
 
