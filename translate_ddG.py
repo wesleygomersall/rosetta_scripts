@@ -65,6 +65,7 @@ def main():
     parser.add_argument("--dump", action="store_true", default=False, help="Dump pre and post-translated poses to pdb") 
     parser.add_argument("--design", action="store_true", default=False, help="Design new peptide sequences.") 
     parser.add_argument("--nstructs", type=int, default=0, help="Number of designs to perform. If not using --design option, this adds replicates to the translate step.")
+    parser.add_argument("--perres-ddg", action="store_true", default=False, help="Store per-residue ddG as b_factor in dumped pdb.") 
     parser.add_argument("--debug", action="store_true", default=False, help="Debug mode, dont apply relax/design instead print packers") 
     args = parser.parse_args()
     
@@ -91,13 +92,15 @@ def main():
     print(f"Input pose: {args.input}")
     input_pose = pose_from_pdb(args.input)
     input_score = scorefxn(input_pose)
-    total_scores_by_term(scorefxn, input_pose, outfilepath = f"{output_directory}/input_scores.csv"):
+    total_scores_by_term(scorefxn, input_pose, outfilepath = f"{output_directory}/input_scores.csv")
     print(f"Input structure score: {input_score}")
 
     relaxed_input = input_pose.clone()
     if args.refine and not args.debug: 
+        print("Relaxing input pose.")
         relax.apply(relaxed_input) 
-        relaxed_score = scorefxn(relaxed_input)
+        scorefxn(relaxed_input)
+        relaxed_score = relaxed_input.energies()
         print(f"Relaxed score: {relaxed_score}")
     else: 
         print("Relax=False")
@@ -174,20 +177,26 @@ def main():
         rel_design.minimize_bond_lengths(True)
         if not args.debug: 
             rel_design.apply(test_pose) 
-        
+
         all_peptide_sequence.append(test_pose.chain_sequence(2))
         print(f"Peptide: {all_peptide_sequence[-1]}") 
         # print(test_pose.pdb_info()) 
 
-        all_bound_dG.append(scorefxn(test_pose))
+        scorefxn(test_pose)
+        bound_score = test_pose.energies() # for per res ddG
+
+        all_bound_dG.append(scorefxn(test_pose)) 
         print(f"Bound score: {all_bound_dG[-1]}")
+
+        # save for later if dumping perres ddG b factor pdb
+        bound_test_pose = test_pose.clone()
 
         if args.dump:
             pre_translated_out_path = f"{output_directory}/structure{structnum}_relaxed.pdb"
             test_pose.dump_pdb(pre_translated_out_path)
 
         total_scores_by_term(scorefxn, test_pose, 
-                            f"{output_directory}/structure{structnum}_bound_scores.csv"):
+                            f"{output_directory}/structure{structnum}_bound_scores.csv")
         
         unbind(test_pose, "A_B")
 
@@ -205,15 +214,36 @@ def main():
             # Re-relax without design
             rel_design.apply(test_pose) 
 
+        scorefxn(test_pose)
+        unbound_score = test_pose.energies() # for per res ddG
+
         all_unbound_dG.append(scorefxn(test_pose))
         print(f"Unbound score: {all_unbound_dG[-1]}")
 
         if args.dump: 
+            if args.perres_ddg: 
+                n_resis = test_pose.size()  
+                # get per res dG
+                ddG_perres = []
+                pdb_info = bound_test_pose.pdb_info()
+                for i in range(1, n_resis + 1):
+                    bound_res_energy = bound_score.residue_total_energy(i)
+                    unbound_res_energy = unbound_score.residue_total_energy(i)
+                    # Calculate the delta delta G for this specific residue
+                    residue_ddg = bound_res_energy - unbound_res_energy 
+                    ddG_perres.append((i, input_pose.residue(i).name(), residue_ddg))
+                    
+                    # assign to b_factor
+                    for atom_j in range(1, test_pose.residue(i).natoms() + 1):
+                        pdb_info.temperature(i, atom_j, residue_ddg)
+                    perresddG_out_path = f"{output_directory}/structure{structnum}_perresddg.pdb"
+                    bound_test_pose.dump_pdb(perresddG_out_path)
+
             translated_out_path = f"{output_directory}/structure{structnum}_translated.pdb"
             test_pose.dump_pdb(translated_out_path)
 
         total_scores_by_term(scorefxn, test_pose, 
-                            f"{output_directory}/structure{structnum}_unbound_scores.csv"):
+                            f"{output_directory}/structure{structnum}_unbound_scores.csv")
 
         all_ddG.append(all_bound_dG[-1] - all_unbound_dG[-1])
         print(f"ddG: {all_ddG[-1]}")
