@@ -15,12 +15,13 @@
 source ~/miniforge3/etc/profile.d/conda.sh # for conda to work
 conda activate pyrosetta
 
-# Define your list of inputs
-inputs=(
-    "/path/to/pdb/file1.pdb"
-    "/path/to/pdb/file2.pdb")
+FILE_LIST="inputs_perres_ddG.txt"
+if ! [ -s "$FILE_LIST" ]; then
+    echo "$FILE_LIST is empty. Exiting."
+    exit
+fi
 
-for item in "${inputs[@]}"; do
+for item in $(cat $FILE_LIST); do
 
     python3 ~/rosetta_scripts/translate_ddG.py \
         -i "$item" \
