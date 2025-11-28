@@ -12,6 +12,7 @@ from pyrosetta.rosetta.protocols.relax import ClassicRelax
 from pyrosetta.rosetta.protocols.rigid import RigidBodyTransMover
 from pyrosetta.rosetta.protocols.docking import setup_foldtree
 from pyrosetta.rosetta.protocols.residue_selectors import StoredResidueSubsetSelector, StoreResidueSubsetMover
+from pyrosetta.rosetta.core.simple_metrics.per_residue_metrics import PerResidueEnergyMetric
 
 init("-mute all")
 
@@ -181,8 +182,11 @@ def main():
         print(f"Peptide: {all_peptide_sequence[-1]}") 
         # print(test_pose.pdb_info()) 
 
-        scorefxn(test_pose)
-        bound_score = test_pose.energies() # for per res ddG
+        
+        perresnrg = PerResidueEnergyMetric()
+        perresnrg.set_scorefunction(scorefxn) # will return list given a pose
+
+        bound_score = perresnrg.calculate(test_pose) # for per res ddG
 
         all_bound_dG.append(scorefxn(test_pose)) 
         print(f"Bound score: {all_bound_dG[-1]}")
@@ -213,8 +217,7 @@ def main():
             # Re-relax without design
             rel_design.apply(test_pose) 
 
-        scorefxn(test_pose)
-        unbound_score = test_pose.energies() # for per res ddG
+        unbound_score = perresnrg.calculate(test_pose) # for per res ddG
 
         all_unbound_dG.append(scorefxn(test_pose))
         print(f"Unbound score: {all_unbound_dG[-1]}")
@@ -226,13 +229,13 @@ def main():
             ddG_perres = []
             pdb_info = bound_test_pose.pdb_info()
             for i in range(1, n_resis + 1):
-                bound_res_energy = bound_score.residue_total_energy(i)
-                unbound_res_energy = unbound_score.residue_total_energy(i)
                 # Calculate the delta delta G for this specific residue
-                residue_ddg = bound_res_energy - unbound_res_energy 
-                ddG_perres.append((i, input_pose.residue(i).name(), residue_ddg))
+                residue_ddg = bound_score[i] - unbound_score[i] 
+                if args.debug: print(f"residue {i} ddg: {residue_ddg}")
+
+                ddG_perres.append(residue_ddg)
                 
-                # assign to b_factor
+                # assign to b_factor and dump pose
                 for atom_j in range(1, test_pose.residue(i).natoms() + 1):
                     pdb_info.temperature(i, atom_j, residue_ddg)
                 perresddG_out_path = f"{output_directory}/structure{structnum}_perresddg.pdb"
