@@ -81,11 +81,31 @@ def main():
     parser = argparse.ArgumentParser(description="")
     parser.add_argument("--input", "-i", type=str, default="inputs_to_plot.txt", 
                         help="Path to input txt containing list of files to gather data from.")
+    parser.add_argument("--per-residue", type=str, default="",
+                        help="Rosetta REU score per residue. If specified, this file path contains peptide names and their corresponding lengths in csv. First column is peptide name as in file names, second column is integer lengths. Do not include header.")
     args = parser.parse_args()
 
     file_list = pd.read_csv(args.input, header = None)[0].to_list()
     ddGs = ddGs_to_dataframe(file_list, ["comdn230", "sepm"], "ddGout_", "_model", "_", )
-    ddGs.to_csv("all_ddGs.csv")
+    
+    if args.per_residue != "": 
+
+        pep_lengths = dict()
+        with open(args.per_residue, 'r') as lengths_in:
+            for line in lengths_in: 
+                splitline = line.strip().split(',')
+                pep_lengths[splitline[0]] = int(splitline[1])
+
+        # normalize scores of ddGs
+        def norm_by_len(dfrow): 
+            return dfrow['ddG (REU)'] / pep_lengths[dfrow['Peptide']]
+        ddGs['ddG (REU)'] = ddGs.apply(norm_by_len, axis=1) 
+        
+        # write per residue ddG
+        ddGs.to_csv("all_ddGs_perresidue.csv")
+    else: 
+        # write ddGs without calculating per residue ddG
+        ddGs.to_csv("all_ddGs.csv")
 
     plot_boxes_from_df(ddGs)
 
