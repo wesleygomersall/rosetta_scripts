@@ -235,11 +235,19 @@ def main():
 
                 ddG_perres.append(residue_ddg)
                 
-                # assign to b_factor and dump pose
+                # assign to b_factor 
                 for atom_j in range(1, test_pose.residue(i).natoms() + 1):
                     pdb_info.temperature(i, atom_j, residue_ddg)
-                perresddG_out_path = f"{output_directory}/structure{structnum}_perresddg.pdb"
-                bound_test_pose.dump_pdb(perresddG_out_path)
+                        
+            perresddG_pdb_out_path = f"{output_directory}/structure{structnum}_perresddg.pdb"
+            bound_test_pose.dump_pdb(perresddG_pdb_out_path)
+
+            # Output a csv with per res ddG data also 
+            perresddG_csv_out_path = f"{output_directory}/structure{structnum}_perresddg.csv"
+            with open(perresddG_csv_out_path, 'w') as fout:
+                fout.write("Top of the csv\n")
+                for i, score in enumerate(ddG_perres): 
+                    fout.write(f"{i+1},{test_pose.aa[i+1]},{score}\n")
 
         if args.dump: 
             translated_out_path = f"{output_directory}/structure{structnum}_translated.pdb"
