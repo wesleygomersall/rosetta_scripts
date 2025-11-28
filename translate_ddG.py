@@ -12,6 +12,7 @@ from pyrosetta.rosetta.protocols.relax import ClassicRelax
 from pyrosetta.rosetta.protocols.rigid import RigidBodyTransMover
 from pyrosetta.rosetta.protocols.docking import setup_foldtree
 from pyrosetta.rosetta.protocols.residue_selectors import StoredResidueSubsetSelector, StoreResidueSubsetMover
+from pyrosetta.rosetta.core.simple_metrics.per_residue_metrics import PerResidueEnergyMetric
 
 init("-mute all")
 
@@ -65,6 +66,7 @@ def main():
     parser.add_argument("--dump", action="store_true", default=False, help="Dump pre and post-translated poses to pdb") 
     parser.add_argument("--design", action="store_true", default=False, help="Design new peptide sequences.") 
     parser.add_argument("--nstructs", type=int, default=0, help="Number of designs to perform. If not using --design option, this adds replicates to the translate step.")
+    parser.add_argument("--perres-ddg", action="store_true", default=False, help="Store per-residue ddG as b_factor in dumped pdb.") 
     parser.add_argument("--debug", action="store_true", default=False, help="Debug mode, dont apply relax/design instead print packers") 
     args = parser.parse_args()
     
@@ -96,6 +98,7 @@ def main():
 
     relaxed_input = input_pose.clone()
     if args.refine and not args.debug: 
+        print("Relaxing input pose.")
         relax.apply(relaxed_input) 
         relaxed_score = scorefxn(relaxed_input)
         print(f"Relaxed score: {relaxed_score}")
@@ -174,13 +177,22 @@ def main():
         rel_design.minimize_bond_lengths(True)
         if not args.debug: 
             rel_design.apply(test_pose) 
-        
+
         all_peptide_sequence.append(test_pose.chain_sequence(2))
         print(f"Peptide: {all_peptide_sequence[-1]}") 
         # print(test_pose.pdb_info()) 
 
-        all_bound_dG.append(scorefxn(test_pose))
+        
+        perresnrg = PerResidueEnergyMetric()
+        perresnrg.set_scorefunction(scorefxn) # will return list given a pose
+
+        bound_score = perresnrg.calculate(test_pose) # for per res ddG
+
+        all_bound_dG.append(scorefxn(test_pose)) 
         print(f"Bound score: {all_bound_dG[-1]}")
+
+        # save for later if dumping perres ddG b factor pdb
+        bound_test_pose = test_pose.clone()
 
         if args.dump:
             pre_translated_out_path = f"{output_directory}/structure{structnum}_relaxed.pdb"
@@ -205,8 +217,29 @@ def main():
             # Re-relax without design
             rel_design.apply(test_pose) 
 
+        unbound_score = perresnrg.calculate(test_pose) # for per res ddG
+
         all_unbound_dG.append(scorefxn(test_pose))
         print(f"Unbound score: {all_unbound_dG[-1]}")
+
+        if args.perres_ddg: 
+            # dump a pdb (bound pose) with the per residue ddG as b factor
+            n_resis = test_pose.size()  
+            # get per res dG
+            ddG_perres = []
+            pdb_info = bound_test_pose.pdb_info()
+            for i in range(1, n_resis + 1):
+                # Calculate the delta delta G for this specific residue
+                residue_ddg = bound_score[i] - unbound_score[i] 
+                if args.debug: print(f"residue {i} ddg: {residue_ddg}")
+
+                ddG_perres.append(residue_ddg)
+                
+                # assign to b_factor and dump pose
+                for atom_j in range(1, test_pose.residue(i).natoms() + 1):
+                    pdb_info.temperature(i, atom_j, residue_ddg)
+                perresddG_out_path = f"{output_directory}/structure{structnum}_perresddg.pdb"
+                bound_test_pose.dump_pdb(perresddG_out_path)
 
         if args.dump: 
             translated_out_path = f"{output_directory}/structure{structnum}_translated.pdb"
