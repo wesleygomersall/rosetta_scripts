@@ -99,8 +99,7 @@ def main():
     if args.refine and not args.debug: 
         print("Relaxing input pose.")
         relax.apply(relaxed_input) 
-        scorefxn(relaxed_input)
-        relaxed_score = relaxed_input.energies()
+        relaxed_score = scorefxn(relaxed_input)
         print(f"Relaxed score: {relaxed_score}")
     else: 
         print("Relax=False")
