@@ -3,11 +3,10 @@
 import argparse
 import numpy as np
 import pyrosetta as pr
-# from pyrosetta.rosetta.core.scoring.packstat import pose_to_pack_data, compute_residue_packing_score
 from pyrosetta.rosetta.protocols.analysis import InterfaceAnalyzerMover
 
 parser = argparse.ArgumentParser(description="")
-parser.add_argument("--input", "-i", type=str, help="Input pdb file for interface scoring.")
+parser.add_argument("--file-list", "-f", type=str, help="Input pdb file list for interface scoring. One pdb path per line :-).")
 parser.add_argument("--debug", action="store_true", default=False, help="Debug will output poses.") 
 args = parser.parse_args()
 
@@ -42,16 +41,19 @@ def score_interface(pose, interface ):
     return interfacescore
 
 def main():
-    pdb_file = args.input
-    pose = pr.pose_from_pdb(pdb_file)
 
-    pdb_filelist = ["", 
-                    "",
-                    ""]
+    # get list of inputs
+    my_file_list = []
+    with open(args.file_list, 'r') as fin: 
+        line = fin.read().strip()
+        if line != '': my_file_list.append(line)
 
-    for pdb in pdb_filelist: 
+    for pdb_file in my_file_list: 
+        pose = pr.pose_from_pdb(pdb_file)
+
         myscores_all = score_interface(pose, "A_B")
-        print(f"file: {pdb}")
+
+        print(f"file: {pdb_file}")
         print(f"interface sc_value: {myscores_all.sc_value}")
 
 if __name__ == "__main__":
