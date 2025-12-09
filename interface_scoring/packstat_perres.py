@@ -7,7 +7,7 @@ from pyrosetta.rosetta.protocols.relax import ClassicRelax
 from pyrosetta.rosetta.core.scoring.packstat import pose_to_pack_data, compute_residue_packing_score
 
 parser = argparse.ArgumentParser(description="")
-parser.add_argument("--input", "-i", type=str, help="Input pdb file for interface scoring.")
+parser.add_argument("--file-list", "-f", type=str, help="Input pdb file list for interface scoring.")
 parser.add_argument("--debug", action="store_true", default=False, help="Debug will output poses.") 
 args = parser.parse_args()
 
@@ -42,21 +42,28 @@ def packstat_per_res(input_pose,
 
 def main():
 
+    my_file_list = []
+    with open(args.file_list, 'r') as fin: 
+        for line in fin:
+            file = line.strip()
+            if file != '': my_file_list.append(file)
+
     relax = ClassicRelax() 
     relax.set_scorefxn(scorefxn) 
 
-    pdb_file = args.input
-    pose = pr.pose_from_pdb(pdb_file)
+    for pdb_file in my_file_list:
 
-    if not args.debug: 
-        relax.apply(pose) 
+        pose = pr.pose_from_pdb(pdb_file)
 
-    myscores = packstat_per_res(pose)
-
-    with open(f"{args.input.strip('.pdb')}_residuepackstat.csv", 'w') as fout:
-        fout.write(f"Res_in_pdb,Res_in_chain,Residue,packstat_value\n")
-        for i, item in enumerate(myscores):
-            fout.write(f"{item[0]},{i+1},{item[1]},{item[2]}\n")
+        if not args.debug: 
+            relax.apply(pose) 
+    
+        myscores = packstat_per_res(pose)
+    
+        with open(f"{pdb_file.strip('.pdb')}_residuepackstat.csv", 'w') as fout:
+            fout.write(f"Res_in_pdb,Res_in_chain,Residue,packstat_value\n")
+            for i, item in enumerate(myscores):
+                fout.write(f"{item[0]},{i+1},{item[1]},{item[2]}\n")
 
 if __name__ == "__main__":
     main()
