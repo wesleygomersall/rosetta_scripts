@@ -3,6 +3,7 @@
 import argparse
 import numpy as np
 import pyrosetta as pr
+from pyrosetta.rosetta.protocols.relax import ClassicRelax
 from pyrosetta.rosetta.core.scoring.packstat import pose_to_pack_data, compute_residue_packing_score
 
 parser = argparse.ArgumentParser(description="")
@@ -11,6 +12,7 @@ parser.add_argument("--debug", action="store_true", default=False, help="Debug w
 args = parser.parse_args()
 
 pr.init()
+scorefxn = create_score_function("ref2015_cart")
 
 def packstat_per_res(input_pose, 
                      target_chainid = 1,
@@ -39,8 +41,15 @@ def packstat_per_res(input_pose,
     return [(res[0], res[1], score) for res, score in zip(res_info, averages)]
 
 def main():
+
+    relax = ClassicRelax() 
+    relax.set_scorefxn(scorefxn) 
+
     pdb_file = args.input
     pose = pr.pose_from_pdb(pdb_file)
+
+    if not args.debug: 
+        relax.apply(pose) 
 
     myscores = packstat_per_res(pose)
 

@@ -3,6 +3,7 @@
 import argparse
 import numpy as np
 import pyrosetta as pr
+from pyrosetta.rosetta.protocols.relax import ClassicRelax
 from pyrosetta.rosetta.protocols.analysis import InterfaceAnalyzerMover
 
 parser = argparse.ArgumentParser(description="")
@@ -11,13 +12,13 @@ parser.add_argument("--debug", action="store_true", default=False, help="Debug w
 args = parser.parse_args()
 
 pr.init()
+scorefxn = create_score_function("ref2015_cart")
 
-def score_interface(pose, interface ):
+def score_interface(pose, interface, scorefunct = pr.get_fa_scorefxn()):
     # analyze interface statistics
     iam = InterfaceAnalyzerMover()
     iam.set_interface(interface)
-    scorefxn = pr.get_fa_scorefxn()
-    iam.set_scorefunction(scorefxn)
+    iam.set_scorefunction(scorefunct)
     iam.set_compute_packstat(True)
     iam.set_compute_interface_energy(False)
     iam.set_compute_interface_delta_hbond_unsat(False)
@@ -42,6 +43,9 @@ def score_interface(pose, interface ):
 
 def main():
 
+    relax = ClassicRelax() 
+    relax.set_scorefxn(scorefxn) 
+
     # get list of inputs
     my_file_list = []
     with open(args.file_list, 'r') as fin: 
@@ -51,7 +55,10 @@ def main():
     for pdb_file in my_file_list: 
         pose = pr.pose_from_pdb(pdb_file)
 
-        myscores_all = score_interface(pose, "A_B")
+        if not args.debug: 
+            relax.apply(pose) 
+
+        myscores_all = score_interface(pose, "A_B", scorefxn)
 
         print(f"file: {pdb_file}")
         print(f"interface sc_value: {myscores_all.sc_value}")
