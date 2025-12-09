@@ -3,6 +3,7 @@
 import argparse
 import numpy as np
 import pyrosetta as pr
+from pyrosetta.rosetta.protocols.relax import ClassicRelax
 from pyrosetta.rosetta.protocols.analysis import InterfaceAnalyzerMover
 from pyrosetta.rosetta.protocols.simple_filters import ShapeComplementarityFilter
 from pyrosetta.rosetta.core.select.residue_selector import ResidueIndexSelector
@@ -13,6 +14,7 @@ parser.add_argument("--debug", action="store_true", default=False, help="Debug w
 args = parser.parse_args()
 
 pr.init()
+scorefxn = create_score_function("ref2015_cart")
 
 def create_index_selector(res_nums):
     idx_selector = ResidueIndexSelector()
@@ -20,12 +22,11 @@ def create_index_selector(res_nums):
         idx_selector.append_index(res)
     return idx_selector
 
-def score_interface(pose, interface ):
+def score_interface(pose, interface, scorefunct = pr.get_fa_scorefxn()):
     # analyze interface statistics
     iam = InterfaceAnalyzerMover()
     iam.set_interface(interface)
-    scorefxn = pr.get_fa_scorefxn()
-    iam.set_scorefunction(scorefxn)
+    iam.set_scorefunction(scorefunct)
     iam.set_compute_packstat(True)
     iam.set_compute_interface_energy(False)
     iam.set_compute_interface_delta_hbond_unsat(False)
@@ -50,6 +51,9 @@ def score_interface(pose, interface ):
 
 def main():
 
+    relax = ClassicRelax() 
+    relax.set_scorefxn(scorefxn) 
+
     # get list of inputs
     my_file_list = []
     with open(args.file_list, 'r') as fin: 
@@ -59,15 +63,24 @@ def main():
 
     for pdb_file in my_file_list: 
         with open(f"{pdb_file.rstrip('.pdb')}_residuescscore.csv", 'w') as fout:
-            fout.write("Residue,sc_score\n")
+            fout.write("Residue,sc_score,Full_SC\n")
             pose = pr.pose_from_pdb(pdb_file)
             
             binder_resis_beg = pose.conformation().chain_begin(2)
             binder_resis_end = pose.conformation().chain_end(2)
 
-            for res in range(binder_resis_beg, binder_resis_end + 1):
-                print(res)
+            # TODO: add cases below to allow
+            assert binder_resis_beg > 2 
 
+            if not args.debug: 
+                relax.apply(pose) 
+
+            # full interface scores
+            myscores_all = score_interface(pose, "A_B", scorefxn)
+            interface_sc = myscores_all.sc_value
+
+            for res in range(binder_resis_beg, binder_resis_end + 1):
+                # interface between selection1: res, selection2: everything else
                 other_residues = list(range(1, pose.total_residue() + 1))
                 other_residues.remove(int(res))
 
@@ -77,6 +90,8 @@ def main():
                     sel2_string = f"{min(other_residues)}-{res-1},{pose.total_residue()}"
                 elif res == pose.total_residue(): 
                     sel2_string = f"{min(other_residues)}-{res-1}"
+                # TODO: 
+                # elif res at beginning:
                 else: 
                     sel2_string = f"{min(other_residues)}-{pose.total_residue()}"
 
@@ -86,9 +101,7 @@ def main():
                 sc.residues2(sel2_string) 
                 sc_val = sc.score(pose)
 
-                val = sc_val
-                # val = myscores_all.sc_value
-                fout.write(f"{res},{val}\n")
+                fout.write(f"{res},{sc_val},{interface_sc}\n")
 
 if __name__ == "__main__":
     main()
