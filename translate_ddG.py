@@ -243,11 +243,11 @@ def main():
             bound_test_pose.dump_pdb(perresddG_pdb_out_path)
 
             # Output a csv with per res ddG data also 
-            perresddG_csv_out_path = f"{output_directory}/structure{structnum}_perresddg.csv"
-            with open(perresddG_csv_out_path, 'w') as fout:
-                fout.write("Top of the csv\n")
-                for i, score in enumerate(ddG_perres): 
-                    fout.write(f"{i+1},{test_pose.aa[i+1]},{score}\n")
+            # perresddG_csv_out_path = f"{output_directory}/structure{structnum}_perresddg.csv"
+            # with open(perresddG_csv_out_path, 'w') as fout:
+                # fout.write("Index,Residue,ddG\n")
+                # for i, score in enumerate(ddG_perres): 
+                    # fout.write(f"{i+1},{test_pose.aa[i+1]},{score}\n")
 
         if args.dump: 
             translated_out_path = f"{output_directory}/structure{structnum}_translated.pdb"
