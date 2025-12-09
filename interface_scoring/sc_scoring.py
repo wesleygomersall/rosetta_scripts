@@ -3,13 +3,16 @@
 import argparse
 import numpy as np
 import pyrosetta as pr
+from pyrosetta import *
+from pyrosetta.rosetta.core.scoring import *
 from pyrosetta.rosetta.protocols.relax import ClassicRelax
 from pyrosetta.rosetta.protocols.analysis import InterfaceAnalyzerMover
 from pyrosetta.rosetta.protocols.simple_filters import ShapeComplementarityFilter
 from pyrosetta.rosetta.core.select.residue_selector import ResidueIndexSelector
 
 parser = argparse.ArgumentParser(description="")
-parser.add_argument("--file-list", "-f", type=str, help="Input pdb file list for interface scoring. One pdb path per line :-).")
+parser.add_argument("--input", "-i", type=str, default='', help="Input pdb file for interface scoring. Optional single file process mode.")
+parser.add_argument("--file-list", "-f", type=str, default='', help="Input pdb file list for interface scoring. One pdb path per line :-). Overrides the single input mode.")
 parser.add_argument("--debug", action="store_true", default=False, help="Debug will output poses.") 
 args = parser.parse_args()
 
@@ -54,12 +57,15 @@ def main():
     relax = ClassicRelax() 
     relax.set_scorefxn(scorefxn) 
 
-    # get list of inputs
     my_file_list = []
-    with open(args.file_list, 'r') as fin: 
-        for line in fin:
-            file = line.strip()
-            if file != '': my_file_list.append(file)
+    if args.file_list != '': 
+        # get list of inputs
+        with open(args.file_list, 'r') as fin: 
+            for line in fin:
+                file = line.strip()
+                if file != '': my_file_list.append(file)
+    else: 
+        my_file_list.append(args.input)
 
     for pdb_file in my_file_list: 
         with open(f"{pdb_file.rstrip('.pdb')}_residuescscore.csv", 'w') as fout:

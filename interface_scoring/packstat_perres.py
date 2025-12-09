@@ -3,11 +3,14 @@
 import argparse
 import numpy as np
 import pyrosetta as pr
+from pyrosetta import *
+from pyrosetta.rosetta.core.scoring import *
 from pyrosetta.rosetta.protocols.relax import ClassicRelax
 from pyrosetta.rosetta.core.scoring.packstat import pose_to_pack_data, compute_residue_packing_score
 
 parser = argparse.ArgumentParser(description="")
-parser.add_argument("--file-list", "-f", type=str, help="Input pdb file list for interface scoring.")
+parser.add_argument("--input", "-i", type=str, default='', help="Input pdb file for interface scoring. Optional single file process mode.")
+parser.add_argument("--file-list", "-f", type=str, default='', help="Input pdb file list for interface scoring. One pdb path per line :-). Overrides the single input mode.")
 parser.add_argument("--debug", action="store_true", default=False, help="Debug will output poses.") 
 args = parser.parse_args()
 
@@ -43,10 +46,14 @@ def packstat_per_res(input_pose,
 def main():
 
     my_file_list = []
-    with open(args.file_list, 'r') as fin: 
-        for line in fin:
-            file = line.strip()
-            if file != '': my_file_list.append(file)
+    if args.file_list != '': 
+        # get list of inputs
+        with open(args.file_list, 'r') as fin: 
+            for line in fin:
+                file = line.strip()
+                if file != '': my_file_list.append(file)
+    else: 
+        my_file_list.append(args.input)
 
     relax = ClassicRelax() 
     relax.set_scorefxn(scorefxn) 
